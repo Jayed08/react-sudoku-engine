@@ -1,72 +1,130 @@
-# 🧩 React Sudoku Engine
+# React Sudoku Engine
 
-A sleek, high-performance, and minimalist Sudoku web application built with **React**, **Vite**, and **Oxlint**. Engineered for developers, recruiters, and Sudoku enthusiasts, this project serves as a showcase of algorithmic complexity, clean component design, performance engineering, and state management in modern React.
+A modern Sudoku application built with React 19 and Vite featuring a custom puzzle generator, human-style logical solver, and technique-based difficulty grading.
 
-🔗 **[Live Demo](https://jayed08.github.io/sudoku-react/)**
-
----
-
-## 🚀 The Elevator Pitch
-Most Sudoku web games use pre-generated puzzle databases or slow, third-party APIs. This **React Sudoku Engine** implements a **custom, client-side puzzle generator and solver engine** from scratch. By combining recursive backtracking with low-overhead bitmask validations, it creates valid, uniquely solvable grids in milliseconds directly in the user's browser.
+This application showcases the implementation of a constraint-based backtracking solver optimized with bitwise operations, paired with a sophisticated **rule-based human-like reasoning engine** that parses, grades, and solves puzzles using actual deduction techniques (instead of brute-force).
 
 ---
 
-## 🧠 Technical Architecture & Algorithmic Highlights
+## Why this project?
 
-This project was built to demonstrate clean software engineering patterns, algorithmic optimizations, and interactive UX design. Below are the key engineering decisions:
+Most Sudoku applications classify puzzle difficulty using clue count or rely entirely on brute-force search.
 
-### 1. Bitmask-Optimized Backtracking Solver
-Generating a Sudoku puzzle requires verifying that a candidate board has exactly **one unique solution**. A naive solver can be slow, but this engine utilizes a **bitwise backtracking solver** ([sudoku.js](file:///home/jayed/GitHub/sudoku-react/src/sudoku.js)):
-* **State Compression:** Represents grid rows, columns, and 3x3 sub-grids as 16-bit integers (`Int16Array`).
-* **$O(1)$ Safety Checks:** Instead of scanning full rows, columns, or boxes to see if a digit is present, a bitwise check is performed using `rowMasks[r] | colMasks[c] | boxMasks[boxIndex]`. Checking if a number $N$ is safe is done via:
-  ```javascript
-  const bit = 1 << (num - 1);
-  if ((taken & bit) === 0) { ... }
-  ```
-* **Early Pruning:** The solver returns immediately if it discovers more than one valid configuration, ensuring extremely fast puzzle verification.
+This project instead grades puzzles by solving them with a custom human-style deduction engine implementing techniques such as Naked Pairs, Claiming Pairs, Unique Rectangles, and X-Wings.
 
-### 2. Heuristic-Guided Board Depletion (Hole Digging)
-To generate a puzzle from a solved grid:
-* The engine ranks cells based on a **Removal Score** heuristic, prioritizing cells in highly populated rows/columns to maintain symmetry and logical progression.
-* It iteratively empties cells, running the unique solution validator at each step. If removing a cell makes the puzzle solvable in more than one way, the change is reverted.
-* Employs a fallback solver that searches for the "best match" within a strict iteration threshold to guarantee games are generated with target clue density (ranging from 55 clues for *Beginner* to 22 clues for *Extreme*).
+This allows puzzles with similar clue counts to receive different difficulty ratings based on the logical reasoning actually required.
 
-### 3. Performance Engineering in React
-* **Optimal Memoization:** Static grids (given numbers) are computed via `useMemo` to prevent redundant computations on selection shifts.
-* **Callback Stability:** Functions modifying state (e.g., cell inputs, pencil-notes toggles) are wrapped in `useCallback` to ensure reference equality and optimize React’s reconciliation loop.
-* **Sub-millisecond Linting:** Configured with `Oxlint` (a Rust-powered linter) which validates code quality and catches runtime issues instantly, running over 50x faster than standard ESLint.
+## 🗺️ System Architecture
 
-### 4. Fully Interactive UX & Accessibility
-* **Keyboard Navigation System:** Implements native key listeners supporting directional navigation (arrow keys), number placement (1-9), deletion (Backspace/Delete), pencil-notes toggle (N), and blur (Escape).
-* **Smart Pencil-Notes Layer:** Dynamic sub-grids (3x3 absolute overlays) allow players to sketch multiple candidate digits inside unsolved cells.
-* **Auto-Pruning Notes:** When a player successfully places a digit, the engine automatically calculates intersecting paths (row, column, 3x3 box) and sweeps conflicting pencil marks.
-* **Dynamic Group Highlighting:** Hovering over or selecting any cell dynamically highlights all other cells sharing the same active value, drastically improving board scannability.
+The following diagram illustrates how the game flow interacts with the generator, bitwise solver, and human reasoning grading engine:
+
+```mermaid
+graph TD
+    A["User Selects Difficulty / Starts Game"] --> B["Sudoku Generator (sudoku.js)"]
+    B --> C["Generate Complete Board Grid"]
+    C --> D["Bitwise Backtracking Solver"]
+    D -->|Validates Solvability| C
+    C --> E["Iteratively Remove Digits"]
+    E --> F["Check for Unique Solution"]
+    F -->|No: Restore digit| E
+    F --> G["Human Solver Engine (human_solver.js)"]
+    G --> H["Apply Sequence of Human Deduction Techniques"]
+    H -->|Naked/Hidden Singles, Pairs, X-Wing, etc.| I["Grade Difficulty & Techniques Used"]
+    I -->|Matches Target Level?| J["Render Playable Board to App.jsx"]
+    I -->|Mismatch after max attempts| K["Deliver Closest Fallback Puzzle"]
+    K --> J
+```
+
+### Component Hierarchy
+
+The interface features a modular React structure:
+
+```mermaid
+graph TD
+    App["App.jsx (Main Controller)"] --> Menu["Menu.jsx (Home Panel)"]
+    App --> CustomBuilder["CustomBuilder.jsx (Sandbox Builder)"]
+    App --> Cell["Cell.jsx (Individual Grid Nodes)"]
+    App --> GameModal["GameModal.jsx (End-game / Prompts)"]
+    App --> LoadingOverlay["LoadingOverlay.jsx (Async State Loader)"]
+    CustomBuilder --> Sudoku["sudoku.js (Core Generator/Solver)"]
+    Sudoku --> HumanSolver["human_solver.js (Grading Engine)"]
+```
 
 ---
 
-## 🛠️ Technology Stack
+## ✨ Key Features
 
-* **Frontend:** React 19 (Hooks: `useState`, `useRef`, `useMemo`, `useCallback`, `useEffect`)
-* **Styling:** Modular CSS Custom Properties (CSS variables) for full theme control, combined with CSS Grid and Flexbox for responsive scaling on mobile, tablet, and desktop viewports.
-* **Build Tooling:** Vite (for near-instant HMR and optimized production bundles).
-* **Linter:** Oxlint (Rust-based validation layer).
-* **Deployment:** GitHub Pages (fully automated via simple npm script pipelines).
+- 🎲 **Intelligent Puzzle Generator**: Generates unique-solution boards on-the-fly across six distinct difficulty ratings: *Beginner, Easy, Medium, Hard, Expert, and Extreme*.
+- 🧠 **Rule-Based Grading Engine**: Employs human logic deduction heuristics to grade puzzles based on the hardest technique required to solve them.
+- 🛠️ **Custom Sudoku Sandbox Builder**: A dedicated utility where users can:
+  - Input their own custom Sudoku puzzles (minimum 17 clues enforced).
+  - Verify uniqueness and solve the puzzle with one click.
+  - Perform real-time conflict checking and complexity analysis.
+  - Play the custom board directly inside the game mode.
+- ⚡ **Performance Optimized**: Sub-millisecond constraint satisfaction via bitwise board masking.
+- 💾 **State Persistence**: Saves current board, notes, timer, and mistakes in real-time to `localStorage`. Page refreshes or accidental exits won't lose game progress.
+- ⌨️ **Keyboard Navigation**: Full support for arrow-key navigation, numbers (1-9), Backspace/Delete, and N (toggle pencil notes) for a fluid, power-user experience.
+- 🎨 **Polished UX & Design**: Styled with a CSS variable-based design system featuring fluid animations, responsive layouts, pencil mark grids, mistake limits, and visual highlighting of identical values.
 
 ---
 
-## 📂 Project Structure
+## ⚙️ Technical Deep Dive
 
-```bash
-sudoku-react/
-├── public/                 # Static assets
+### 1. Bitwise Backtracking Solver (`sudoku.js`)
+
+To verify unique solutions and generate boards at lightning speed, the core solver in [sudoku.js](file:///home/jayed/GitHub/react-sudoku-engine/src/sudoku.js) uses **bitwise mask arrays** (`Int16Array`).
+
+- Instead of repeatedly scanning rows, columns, and 3x3 subgrids using loops (which is **O(N)**), constraints are represented as integers where the *i*-th bit represents the presence of digit *i+1*.
+
+- Finding valid choices for a cell becomes a simple bitwise OR followed by negation and masking:
+
+```text
+taken     = rowMasks[r] | colMasks[c] | boxMasks[boxIndex]
+available = (~taken) & 0x1FF
+```
+
+- The solver incorporates the **Minimum Remaining Values (MRV) heuristic** to find the cell with the fewest candidates first, dramatically reducing backtracking branch count.
+### 2. Human Logic Solver & Puzzle Grader (`human_solver.js`)
+Instead of backtracking, the solver in [human_solver.js](file:///home/jayed/GitHub/react-sudoku-engine/src/human_solver.js) resolves grids using techniques modeled after human deduction:
+- **Tier 1 (Beginner)**: *Full House*, *Hidden Singles (No Pencil Marks)*.
+- **Tier 2 (Easy)**: *Naked Singles*.
+- **Tier 3 (Medium)**: *Pointing Pairs*.
+- **Tier 4 (Hard)**: *Hidden Singles (With Marks)*, *Naked Pairs*, *Claiming Pairs*, *Hidden Pairs*.
+- **Tier 5 (Expert)**: *Unique Rectangle (Types 1, 2, and 4)*, *X-Wings*.
+- **Extreme**: Puzzles requiring more complex deduction structures (e.g., Swordfish, XY-Wing, forcing chains) fallback to this rating when simpler techniques yield no progress.
+
+### 3. React Performance Considerations
+- **Minimized Re-renders**: Critical UI components like [Cell.jsx](file:///home/jayed/GitHub/react-sudoku-engine/src/components/Cell.jsx) receive optimized props to avoid re-rendering the whole 81-cell grid on selection changes.
+- **Dynamic Memoization**: Cell highlight statuses (checking for same-value highlights, focus status) are memoized using `useMemo` in [App.jsx](file:///home/jayed/GitHub/react-sudoku-engine/src/App.jsx).
+
+---
+
+## 📁 Folder Structure
+
+```text
+react-sudoku-engine/
+├── index.html
+├── package.json
+├── vite.config.js
 ├── src/
-│   ├── App.jsx            # Main React component, state orchestration, layout, and event handlers
-│   ├── main.jsx           # React app entry point and DOM mounting
-│   ├── styles.css         # Responsive typography, layout sheets, dark/minimalist design variables
-│   └── sudoku.js          # Backtracking solver, generator, bitwise unique validation class
-├── package.json           # Scripts, build dependencies, and engine configurations
-├── vite.config.js         # Vite bundling configuration
-└── README.md              # Project documentation
+│   ├── main.jsx
+│   ├── App.jsx                 # Core game controller & main layout
+│   ├── styles.css              # Global styles & design tokens
+│   ├── sudoku.js               # Bitwise Backtracker & Board Generator
+│   ├── human_solver.js         # Human deduction logic solver & grader
+│   ├── components/
+│   │   ├── Cell.jsx            # Individual Sudoku grid cell (given, input, notes)
+│   │   ├── Cell.css
+│   │   ├── Menu.jsx            # Level select and custom sandbox launcher
+│   │   ├── Menu.css
+│   │   ├── CustomBuilder.jsx   # Custom board creator and analyzer
+│   │   ├── CustomBuilder.css
+│   │   ├── GameModal.jsx       # Custom modal for Game Over / Victory
+│   │   ├── GameModal.css
+│   │   └── LoadingOverlay.jsx  # Loader for asynchronous puzzle generation
+│   │       └── LoadingOverlay.css
+│   └── utils/
+│       └── sudokuHelpers.js    # LocalStorage serialization and coordinate mappers
 ```
 
 ---
@@ -80,8 +138,8 @@ Make sure you have [Node.js](https://nodejs.org/) installed (Node 18+ recommende
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/sudoku-react.git
-cd sudoku-react
+git clone https://github.com/Jayed08/react-sudoku-engine.git
+cd react-sudoku-engine
 ```
 
 ### 2. Install Dependencies
@@ -97,24 +155,15 @@ Open your browser at the local address shown in the terminal (typically `http://
 
 ---
 
-## ⌨️ Keyboard Control Bindings
 
-| Key Input | Action Target |
-| :--- | :--- |
-| `↑` `↓` `←` `→` | Navigate grid selection |
-| `1` - `9` | Input number into cell (or toggle pencil note) |
-| `Backspace` / `Delete` | Clear current cell value or pencil notes |
-| `N` / `n` | Toggle pencil-notes mode |
-| `Escape` | Reset selection and highlights |
+## 🔮 Future Enhancements (Roadmap)
 
----
-
-## 📈 Future Roadmaps & Enhancements
-* [ ] **Local Storage State Persistence:** Auto-save gameplay progress to local storage so users can resume after a browser crash/refresh.
-* [ ] **Custom Board Builder:** Allow users to type/scan custom Sudoku puzzles and solve them using the bitmask backtracking solver.
-* [ ] **Dark Mode Toggle:** Integrate system-level dark mode hooks to switch CSS variables smoothly.
+- [ ] **Advanced Techniques**: Implement Swordfish, XY-Wing, and Jellyfish heuristics in `HumanSolverEngine`.
+- [ ] **Web Workers Integration**: Offload heavy Extreme board generation attempts into a background thread to completely eliminate brief main-thread UI frames blocking.
+- [ ] **Step-by-Step Logic Explanation**: In Builder mode, show the player *why* a cell resolves (e.g. *"Cell R3C4 set to 5 due to Pointing Pair in Box 2"*).
+- [ ] **Statistics Dashboard**: Track win/loss rates, solve times, and average mistakes grouped by difficulty levels.
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License. See the [LICENSE](file:///home/jayed/GitHub/sudoku-react/LICENSE) file for details.
+This project is open-source and licensed under the [MIT License](file:///home/jayed/GitHub/react-sudoku-engine/LICENSE).

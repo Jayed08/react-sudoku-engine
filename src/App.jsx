@@ -1,22 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Sudoku } from './sudoku.js';
-
-const LEVELS = ['Beginner', 'Easy', 'Medium', 'Hard', 'Expert', 'Extreme'];
-const MAX_MISTAKES = 3;
-const emptyGrid = Array(81).fill(0);
-const emptyNotes = () => Array.from({ length: 81 }, () => []);
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-  const secs = (seconds % 60).toString().padStart(2, '0');
-  return `${mins}:${secs}`;
-}
-
-function readInitialLevel() {
-  const params = new URLSearchParams(window.location.search);
-  const level = params.get('level');
-  return LEVELS.includes(level) ? level : null;
-}
+import Menu from './components/Menu.jsx';
+import Cell from './components/Cell.jsx';
+import LoadingOverlay from './components/LoadingOverlay.jsx';
+import GameModal from './components/GameModal.jsx';
+import CustomBuilder from './components/CustomBuilder.jsx';
+import {
+  MAX_MISTAKES,
+  emptyGrid,
+  emptyNotes,
+  formatTime,
+  readInitialLevel,
+  persistSave,
+  persistLoad,
+  persistClear,
+} from './utils/sudokuHelpers.js';
 
 export default function App() {
   const gameRef = useRef(new Sudoku());
@@ -34,10 +32,78 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [modal, setModal] = useState(null);
 
+  // States to keep track of custom puzzle for restarts/try-agains
+  const [customInitialPuzzle, setCustomInitialPuzzle] = useState(null);
+  const [customInitialSolution, setCustomInitialSolution] = useState(null);
+
   const fixedCells = useMemo(() => puzzle.map((value) => value !== 0), [puzzle]);
   const selectedValue = selectedIndex === null ? 0 : puzzle[selectedIndex] || values[selectedIndex];
 
-  const startGame = useCallback((nextLevel) => {
+  // ── Restore persisted state on first mount ────────────────────────────────
+  useEffect(() => {
+    const urlLevel = readInitialLevel();
+    if (urlLevel) {
+      startGame(urlLevel);
+      return;
+    }
+
+    const saved = persistLoad();
+    if (saved?.screen === 'game' && saved.puzzle?.length === 81) {
+      setPuzzle(saved.puzzle);
+      setSolution(saved.solution ?? emptyGrid);
+      setValues(saved.values ?? emptyGrid);
+      setNotes(saved.notes ?? emptyNotes());
+      setErrors(Array(81).fill(false));
+      setMistakes(saved.mistakes ?? 0);
+      setLevel(saved.level ?? 'Easy');
+      setSecondsElapsed(saved.secondsElapsed ?? 0);
+      setIsPencilMode(false);
+      setScreen('game');
+
+      if (saved.customInitialPuzzle) {
+        setCustomInitialPuzzle(saved.customInitialPuzzle);
+        setCustomInitialSolution(saved.customInitialSolution);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Persist whenever game state changes ───────────────────────────────────
+  useEffect(() => {
+    if (screen === 'game' && !isLoading) {
+      persistSave({
+        screen,
+        puzzle,
+        solution,
+        values,
+        notes,
+        mistakes,
+        level,
+        secondsElapsed,
+        customInitialPuzzle,
+        customInitialSolution,
+      });
+    }
+  }, [
+    screen,
+    puzzle,
+    solution,
+    values,
+    notes,
+    mistakes,
+    level,
+    secondsElapsed,
+    isLoading,
+    customInitialPuzzle,
+    customInitialSolution,
+  ]);
+
+  // ── Clear persistence when leaving game ───────────────────────────────────
+  useEffect(() => {
+    if (screen !== 'game') persistClear();
+  }, [screen]);
+
+  const startGame = useCallback((nextLevel, customData = null) => {
     setLevel(nextLevel);
     setScreen('game');
     setIsLoading(true);
@@ -46,9 +112,25 @@ export default function App() {
     window.history.pushState(null, '', `?level=${encodeURIComponent(nextLevel)}`);
 
     window.setTimeout(() => {
-      const data = gameRef.current.generate(nextLevel);
-      setPuzzle(data.puzzle);
-      setSolution(data.solution);
+      let finalPuzzle, finalSolution;
+      if (customData) {
+        finalPuzzle = customData.puzzle;
+        finalSolution = customData.solution;
+        setCustomInitialPuzzle(customData.puzzle);
+        setCustomInitialSolution(customData.solution);
+      } else if (nextLevel.startsWith('Custom') && customInitialPuzzle) {
+        finalPuzzle = customInitialPuzzle;
+        finalSolution = customInitialSolution;
+      } else {
+        const data = gameRef.current.generate(nextLevel);
+        finalPuzzle = data.puzzle;
+        finalSolution = data.solution;
+        setCustomInitialPuzzle(null);
+        setCustomInitialSolution(null);
+      }
+
+      setPuzzle(finalPuzzle);
+      setSolution(finalSolution);
       setValues(emptyGrid);
       setNotes(emptyNotes());
       setErrors(Array(81).fill(false));
@@ -57,7 +139,7 @@ export default function App() {
       setSecondsElapsed(0);
       setIsLoading(false);
     }, 50);
-  }, []);
+  }, [customInitialPuzzle, customInitialSolution]);
 
   const returnToMenu = useCallback(() => {
     setScreen('menu');
@@ -66,12 +148,12 @@ export default function App() {
     window.history.pushState(null, '', window.location.pathname);
   }, []);
 
-  useEffect(() => {
-    const initialLevel = readInitialLevel();
-    if (initialLevel) {
-      startGame(initialLevel);
-    }
-  }, [startGame]);
+  const openBuilder = useCallback(() => {
+    setScreen('builder');
+    setModal(null);
+    setSelectedIndex(null);
+    window.history.pushState(null, '', window.location.pathname);
+  }, []);
 
   useEffect(() => {
     if (screen !== 'game' || isLoading || modal) return undefined;
@@ -254,7 +336,16 @@ export default function App() {
   };
 
   if (screen === 'menu') {
-    return <Menu onSelectLevel={startGame} />;
+    return <Menu onSelectLevel={startGame} onOpenBuilder={openBuilder} />;
+  }
+
+  if (screen === 'builder') {
+    return (
+      <CustomBuilder
+        onBack={returnToMenu}
+        onPlayCustom={(customData) => startGame('Custom', customData)}
+      />
+    );
   }
 
   return (
@@ -321,79 +412,6 @@ export default function App() {
       </main>
 
       {modal && <GameModal modal={modal} />}
-    </div>
-  );
-}
-
-function Menu({ onSelectLevel }) {
-  return (
-    <main className="menu-screen">
-      <section className="menu-panel">
-        <div className="menu-copy">
-          <h1>Sudoku</h1>
-          <p>Select Difficulty</p>
-        </div>
-
-        <div className="level-grid">
-          {LEVELS.map((level) => (
-            <button className={`level-button level-${level.toLowerCase()}`} type="button" key={level} onClick={() => onSelectLevel(level)}>
-              {level}{level === 'Extreme' ? ' ⚡' : ''}
-            </button>
-          ))}
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function Cell({ given, value, notes, isSelected, isHighlighted, hasError, onSelect }) {
-  const displayValue = given || value || '';
-  const classes = [
-    'cell',
-    given ? 'fixed-cell' : 'playable-cell',
-    isSelected ? 'selected' : '',
-    isHighlighted ? 'highlight-same' : '',
-    hasError ? 'error' : '',
-  ].filter(Boolean).join(' ');
-
-  return (
-    <button className={classes} type="button" onClick={onSelect}>
-      <span className="notes-grid" aria-hidden="true">
-        {Array.from({ length: 9 }, (_, index) => index + 1).map((number) => (
-          <span className={`note-num ${notes.includes(number) ? 'active' : ''}`} key={number}>
-            {number}
-          </span>
-        ))}
-      </span>
-      <span className="value">{displayValue}</span>
-    </button>
-  );
-}
-
-function LoadingOverlay() {
-  return (
-    <div className="loading-overlay">
-      <div className="spinner" />
-      <p className="loading-text">Generating Puzzle...</p>
-    </div>
-  );
-}
-
-function GameModal({ modal }) {
-  return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="modal-card">
-        <h2 id="modal-title">{modal.title}</h2>
-        <p>{modal.message}</p>
-        <div className="modal-actions">
-          <button className="secondary-button" type="button" onClick={modal.onSecondary}>
-            {modal.secondary}
-          </button>
-          <button className="primary-button" type="button" onClick={modal.onPrimary}>
-            {modal.primary}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

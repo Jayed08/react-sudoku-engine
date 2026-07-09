@@ -1,0 +1,100 @@
+.menu-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.menu-panel {
+  width: min(100%, 380px);
+  padding: 32px;
+  background: white;
+  border: 1px solid var(--slate-100);
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+}
+
+.menu-copy {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.menu-copy h1 {
+  margin: 0;
+  color: var(--slate-900);
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.menu-copy p {
+  margin: 10px 0 0;
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+.level-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.level-button {
+  width: 100%;
+  height: 56px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: white;
+  color: var(--slate-700);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  transition: transform 150ms ease, border-color 150ms ease, color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.level-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--brand-600);
+  background: var(--brand-50);
+  color: var(--brand-600);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.14);
+}
+
+.level-hard {
+  color: #ea580c;
+}
+
+.level-expert {
+  color: #dc2626;
+}
+
+.level-extreme {
+  color: #7c3aed;
+}
+
+.builder-entry-btn {
+  width: 100%;
+  height: 44px;
+  margin-top: 16px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: white;
+  color: var(--slate-500);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.builder-entry-btn:hover {
+  border-color: var(--brand-600);
+  color: var(--brand-600);
+  background: var(--brand-50);
+}
+
+@media (max-width: 540px) {
+  .menu-panel {
+    padding: 24px;
+  }
+}

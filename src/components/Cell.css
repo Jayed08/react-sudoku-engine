@@ -1,0 +1,94 @@
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--slate-300);
+  border-bottom: 1px solid var(--slate-300);
+  background: white;
+  color: var(--brand-600);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cell:nth-child(9n) {
+  border-right: 0;
+}
+
+.cell:nth-child(n + 73) {
+  border-bottom: 0;
+}
+
+.cell:nth-child(3n):not(:nth-child(9n)) {
+  border-right: 3px solid var(--slate-700);
+}
+
+.cell:nth-child(n + 19):nth-child(-n + 27),
+.cell:nth-child(n + 46):nth-child(-n + 54) {
+  border-bottom: 3px solid var(--slate-700);
+}
+
+.cell:hover {
+  background: var(--brand-50);
+}
+
+.fixed-cell {
+  background: var(--slate-100);
+  color: var(--slate-900);
+  cursor: default;
+}
+
+.cell.selected {
+  z-index: 2;
+  background: var(--brand-100);
+  outline: 2px solid var(--brand-600);
+  outline-offset: -2px;
+}
+
+.cell.highlight-same {
+  background: var(--brand-200);
+}
+
+.cell.error {
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.value {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(20px, 5.4vmin, 32px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.notes-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 2px;
+  pointer-events: none;
+}
+
+.note-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-500);
+  font-size: clamp(7px, 1.55vmin, 10px);
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+}
+
+.note-num.active {
+  opacity: 1;
+}
