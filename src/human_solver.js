@@ -1,18 +1,19 @@
 export class HumanSolverEngine {
     constructor(grid) {
-        // Deep copy the 2D grid to preserve the generator's original board state
-        this.board = grid.map(row => [...row]);
+        // Deep copy the 2D grid and convert all elements to numbers to ensure type correctness
+        this.board = grid.map(row => row.map(val => Number(val) || 0));
         // 3D array tracking 1-9 booleans for each cell's pencil marks
         this.candidates = Array.from({ length: 9 }, () =>
         Array.from({ length: 9 }, () => Array(10).fill(true))
         );
         // Track the highest technique needed to solve the puzzle
         this.highestTechniqueUsed = 'Beginner';
+        this.techniquesUsed = new Set();
     }
 
     /**
      * Evaluates the puzzle and returns its human difficulty rating
-     * @return {Object} { puzzle: [flat array], level: string }
+     * @return {Object} { puzzle: [flat array], level: string, solved: boolean, techniques: string[] }
      */
     gradePuzzle() {
         this.initializeCandidates();
@@ -23,76 +24,76 @@ export class HumanSolverEngine {
 
             // Tier 1: Beginner
             if (this.findFullHouse()) {
-                this.updateGrade('Beginner');
+                this.updateGrade('Beginner', 'Full House');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findHiddenSingleNoMarks()) {
-                this.updateGrade('Beginner');
+                this.updateGrade('Beginner', 'Hidden Single');
                 logicStepFound = true;
                 continue;
             }
 
             // Tier 2: Easy
             if (this.findNakedSingle()) {
-                this.updateGrade('Easy');
+                this.updateGrade('Easy', 'Naked Single');
                 logicStepFound = true;
                 continue;
             }
 
             // Tier 3: Medium
             if (this.findPointingPairs()) {
-                this.updateGrade('Medium');
+                this.updateGrade('Medium', 'Pointing Pairs');
                 logicStepFound = true;
                 continue;
             }
             // Tier 4: Hard
             if (this.findHiddenSingleWithMarks()) {
-                this.updateGrade('Hard');
+                this.updateGrade('Hard', 'Hidden Single');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findNakedPairs()) {
-                this.updateGrade('Hard');
+                this.updateGrade('Hard', 'Naked Pairs');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findClaimingPairs()) {
-                this.updateGrade('Hard');
+                this.updateGrade('Hard', 'Claiming Pairs');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findHiddenPairs()) {
-                this.updateGrade('Hard');
+                this.updateGrade('Hard', 'Hidden Pairs');
                 logicStepFound = true;
                 continue;
             }
 
             // Tier 5: Expert
             if (this.findUniqueRectangleType1()) {
-                this.updateGrade('Expert');
+                this.updateGrade('Expert', 'Unique Rectangle Type 1');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findUniqueRectangleType2()) {
-                this.updateGrade('Expert');
+                this.updateGrade('Expert', 'Unique Rectangle Type 2');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findUniqueRectangleType4()) {
-                this.updateGrade('Expert');
+                this.updateGrade('Expert', 'Unique Rectangle Type 4');
                 logicStepFound = true;
                 continue;
             }
 
             if (this.findXWing()) {
-                this.updateGrade('Expert');
+                this.updateGrade('Expert', 'X-Wing');
                 logicStepFound = true;
                 continue;
             }
@@ -101,16 +102,25 @@ export class HumanSolverEngine {
             // Puzzle is classified as Extreme.
         }
 
+        const techniques = Array.from(this.techniquesUsed);
+        if (!this.isSolved()) {
+            techniques.push("other advanced techniques");
+        }
+
         return {
             level: this.isSolved() ? this.highestTechniqueUsed : 'Extreme',
-            solved: this.isSolved()
+            solved: this.isSolved(),
+            techniques: techniques
         };
     }
 
-    updateGrade(level) {
+    updateGrade(level, techniqueName) {
         const LEVELS = ['Beginner', 'Easy', 'Medium', 'Hard', 'Expert', 'Extreme'];
         if (LEVELS.indexOf(level) > LEVELS.indexOf(this.highestTechniqueUsed)) {
             this.highestTechniqueUsed = level;
+        }
+        if (techniqueName) {
+            this.techniquesUsed.add(techniqueName);
         }
     }
 

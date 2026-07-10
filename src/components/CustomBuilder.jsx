@@ -116,7 +116,11 @@ export default function CustomBuilder({ onBack, onPlayCustom }) {
       setStatus({ kind: 'err', text: `Cannot analyze: ${res.error}` });
     } else {
       const grade = gradeFlat(grid);
-      setStatus({ kind: 'analysis', level: grade.level });
+      setStatus({
+        kind: 'analysis',
+        level: grade.level,
+        techniques: grade.techniques
+      });
     }
   });
 
@@ -230,10 +234,24 @@ export default function CustomBuilder({ onBack, onPlayCustom }) {
           {status && !busy && (
             <div className={`builder-status builder-status--${status.kind}`}>
               {status.kind === 'analysis' ? (
-                <div className="bs-row">
-                  <span className="bs-label">Difficulty</span>
-                  <span className="bs-value" style={{ color: LEVEL_COLOR[status.level] }}>{status.level}</span>
-                </div>
+                <>
+                  <div className="bs-row">
+                    <span className="bs-label">Difficulty</span>
+                    <span className="bs-value" style={{ color: LEVEL_COLOR[status.level] }}>{status.level}</span>
+                  </div>
+                  <div className="bs-row" style={{ flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+                    <span className="bs-label" style={{ marginBottom: '6px' }}>Techniques Used</span>
+                    {status.techniques && status.techniques.length > 0 ? (
+                      <ul className="bs-techniques-list" style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--slate-700)', listStyleType: 'disc', width: '100%', textAlign: 'left' }}>
+                        {status.techniques.map((t, idx) => (
+                          <li key={idx} style={{ marginTop: '4px' }}>{t}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="bs-value" style={{ textAlign: 'left', fontSize: '13px', width: '100%' }}>None</span>
+                    )}
+                  </div>
+                </>
               ) : (
                 <p className="bs-text">{status.text}</p>
               )}
